@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,-apple-system,"Segoe UI",sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Speed Switch Challenge</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&family=Noto+Sans+SC:wght@500;700&display=swap">
+<style>
+/* Layout: a single booth-tablet shell; experimenter bar on top, one screen at a time below, the stimulus card fills the stage during trials. */
+:root{
+  --bg:#eef2f5; --surface:#ffffff; --ink:#132029; --muted:#596773; --line:#d4dce3;
+  --accent:#0d6b66; --accent-ink:#ffffff;
+  --cue-s:#1d5bd4; --cue-w:#cf3226; --cue-s-soft:#c9d8f6; --cue-w-soft:#f5cfcb;
+  --good:#1f7a3d; --warn:#9a5b00;
+  --f-display:"Bricolage Grotesque","Noto Sans SC",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Noto Sans SC",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --f-emoji:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1318; --surface:#151d24; --ink:#e4eaef; --muted:#97a5b0; --line:#28333c;
+  --accent:#3db3a9; --accent-ink:#06201e;
+  --cue-s:#3a78ee; --cue-w:#e4503f; --cue-s-soft:#1f3355; --cue-w-soft:#4a2421;
+  --good:#5ccf84; --warn:#e2a54a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1318; --surface:#151d24; --ink:#e4eaef; --muted:#97a5b0; --line:#28333c;
+  --accent:#3db3a9; --accent-ink:#06201e;
+  --cue-s:#3a78ee; --cue-w:#e4503f; --cue-s-soft:#1f3355; --cue-w-soft:#4a2421;
+  --good:#5ccf84; --warn:#e2a54a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 32px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(1.7rem,4vw,2.4rem);font-weight:800}
+h2{font-size:clamp(1.4rem,3.2vw,1.9rem);font-weight:800}
+h3{font-size:1.05rem;font-weight:600}
+p{margin:0}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  border-bottom:1px solid var(--line);padding-bottom:10px}
+.brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.brand b{font-family:var(--f-display);font-size:1.15rem;font-weight:800}
+.chip{font-family:var(--f-mono);font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);
+  border:1px solid var(--line);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.label{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+select,input[type=text]{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.check{display:flex;gap:10px;align-items:flex-start}
+.check input{width:20px;height:20px;margin-top:3px;accent-color:var(--accent)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:10px 16px;font-weight:700}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.ghost{background:transparent}
+button.danger{color:var(--cue-w);border-color:var(--cue-w)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.big{font-size:1.15rem;padding:14px 26px}
+.muted{color:var(--muted)}
+.small{font-size:.9rem}
+.note{font-size:.9rem;color:var(--muted);border-left:3px solid var(--line);padding-left:12px}
+.err{color:var(--cue-w);font-weight:700}
+/* orientation */
+.rule{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.swatch{border-radius:14px;padding:22px 18px;color:#fff;display:flex;flex-direction:column;gap:6px;min-height:120px;justify-content:flex-end}
+.swatch.s{background:var(--cue-s)} .swatch.w{background:var(--cue-w)}
+.swatch b{font-family:var(--f-display);font-size:1.6rem;font-weight:800}
+.swatch span{font-size:.95rem;opacity:.92}
+.visitor-text{font-size:1.2rem;max-width:62ch}
+.passage{font-size:1.4rem;line-height:1.75;max-width:60ch;padding:18px 20px;border-radius:12px;background:var(--cue-w-soft);border-left:6px solid var(--cue-w)}
+.passage:lang(zh){font-size:1.6rem;letter-spacing:.04em}
+.timer{font-family:var(--f-mono);font-size:2.2rem;font-variant-numeric:tabular-nums}
+/* stage */
+.stage{display:flex;flex-direction:column;gap:14px}
+.card{position:relative;border-radius:22px;min-height:min(58vh,520px);display:flex;align-items:center;justify-content:center;
+  background:var(--surface);border:1px solid var(--line);overflow:hidden;user-select:none}
+.card.s{background:var(--cue-s);border-color:var(--cue-s)} .card.w{background:var(--cue-w);border-color:var(--cue-w)}
+.emoji{font-family:var(--f-emoji);font-size:clamp(7rem,22vw,12rem);line-height:1}
+.fix{font-family:var(--f-mono);font-size:3rem;color:var(--muted)}
+.tag{position:absolute;top:14px;left:14px;font-family:var(--f-mono);font-size:.85rem;color:#fff;background:rgba(0,0,0,.25);border-radius:999px;padding:4px 12px}
+.prog{position:absolute;top:14px;right:14px;font-family:var(--f-mono);font-size:.8rem;color:var(--muted)}
+.card.s .prog,.card.w .prog{color:rgba(255,255,255,.85)}
+.controls{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+.controls button{padding:22px;font-size:1.25rem}
+.btn-spoke{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn-error{color:var(--cue-w);border-color:var(--cue-w)}
+.keys{font-family:var(--f-mono);font-size:.8rem;color:var(--muted)}
+/* tables */
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+td .em{font-family:var(--f-emoji);font-size:1.4rem}
+.lang{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px}
+.lang.S{background:var(--cue-s)} .lang.W{background:var(--cue-w)}
+tr.out td{color:var(--muted);text-decoration:line-through}
+tr.out td:last-child{text-decoration:none}
+/* results */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.stat{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:4px}
+.stat .v{font-family:var(--f-mono);font-size:1.7rem;font-variant-numeric:tabular-nums}
+.bars{display:flex;flex-direction:column;gap:10px}
+.barrow{display:grid;grid-template-columns:minmax(120px,210px) 1fr 70px;gap:10px;align-items:center}
+.barrow .name{font-size:.95rem;min-width:0}
+.track{height:24px;background:var(--bg);border-radius:6px;overflow:hidden}
+.fill{height:100%;border-radius:6px}
+.fill.S{background:var(--cue-s)} .fill.W{background:var(--cue-w)}
+.fill.soft.S{background:var(--cue-s-soft);box-shadow:inset 0 0 0 2px var(--cue-s)}
+.fill.soft.W{background:var(--cue-w-soft);box-shadow:inset 0 0 0 2px var(--cue-w)}
+.barrow .v{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+.explain{display:flex;flex-direction:column;gap:12px;font-size:1.1rem;max-width:66ch}
+.explain p{padding-left:14px;border-left:4px solid var(--line)}
+.explain p.key{border-left-color:var(--accent)}
+.verdicts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.verdict{border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.verdict .vt{font-size:.78rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+.verdict .vb{font-family:var(--f-display);font-size:1.35rem;font-weight:800;line-height:1.2}
+.verdict.slow .vb{color:var(--warn)} .verdict.fast .vb{color:var(--good)} .verdict.same .vb{color:var(--ink)} .verdict.pred .vb{color:var(--accent)}
+.verdict.slow{border-top:4px solid var(--warn)} .verdict.fast{border-top:4px solid var(--good)} .verdict.same{border-top:4px solid var(--muted)} .verdict.pred{border-top:4px solid var(--accent)}
+.chart{display:flex;flex-direction:column;gap:6px}
+.chart svg{width:100%;height:auto;display:block;overflow:visible}
+.chart svg text{fill:var(--muted);font-family:var(--f-body);font-size:13px}
+.chart svg .strong{fill:var(--ink);font-weight:700}
+.chart .axis{stroke:var(--line);stroke-width:1.5}
+.chart .zero{stroke:var(--ink);stroke-width:1.5}
+.chart .zone{fill:var(--accent);opacity:.13}
+.chart .zonelabel{fill:var(--accent);font-weight:700}
+.chart .bS{fill:var(--cue-s)} .chart .bW{fill:var(--cue-w)}
+.chart .curve{fill:none;stroke:var(--accent);stroke-width:2.5}
+.chart .area{fill:var(--accent);opacity:.16}
+.chart .dot{fill:var(--muted);opacity:.8}
+.chart .you{stroke:var(--cue-w);stroke-width:3}
+.chart .youlabel{fill:var(--cue-w);font-weight:700}
+textarea{width:100%;min-height:120px;font-family:var(--f-mono);font-size:.8rem;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:10px}
+@media (max-width:560px){.barrow{grid-template-columns:1fr 64px}.barrow .name{grid-column:1/-1}.controls{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:no-preference){.fill{transition:width .5s ease}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="bar">
+    <div class="brand"><b>Speed Switch Challenge</b><span class="muted small">PSY 111 · Bilingualism booth</span></div>
+    <div class="row">
+      <span class="chip" id="chipVisitor">Visitor #1</span>
+      <span class="chip" id="chipStep">Setup</span>
+      <button class="ghost small" id="btnBoard">Booth results</button>
+      <button class="ghost small" id="btnStop" hidden>End session</button>
+    </div>
+  </header>
+
+  <!-- SETUP (experimenter, English) -->
+  <section id="scrSetup" class="panel">
+    <div><span class="label">Experimenter setup</span><h1>New visitor</h1></div>
+    <div class="grid2">
+      <div class="field"><label class="label" for="inName">Visitor name</label>
+        <input type="text" id="inName" autocomplete="off" placeholder="e.g. Aisyah Tan"></div>
+      <div class="field"><label class="label" for="inCourse">Course</label>
+        <input type="text" id="inCourse" autocomplete="off" placeholder="e.g. Psychology, Year 1"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label class="label" for="selStrong">Strongest language</label>
+        <select id="selStrong"><option value="en">English</option><option value="ms">Malay</option><option value="zh" selected>Chinese</option></select></div>
+      <div class="field"><label class="label" for="selWeak">Weaker language for the game</label>
+        <select id="selWeak"><option value="en" selected>English</option><option value="ms">Malay</option><option value="zh">Chinese</option></select></div>
+      <div class="field"><label class="label" for="selList">Picture list</label>
+        <select id="selList"><option value="A">List A</option><option value="B">List B</option></select>
+        <span class="small muted">Alternate A and B between visitors so picture difficulty doesn't favour one language.</span></div>
+    </div>
+    <label class="check" for="chkLabel"><input type="checkbox" id="chkLabel"><span>Show the language name on each card (only for visitors who can't tell blue from red)</span></label>
+    <label class="check" for="chkConsent"><input type="checkbox" id="chkConsent"><span>Visitor agreed to be timed and to have their name, course and results kept for our booth records only. They can stop at any time.</span></label>
+    <p class="note">After you press Start, the visitor reads a short passage <b>aloud</b> in their <b>weaker</b> language for 60 seconds. All instructions and results are in English.</p>
+    <p class="err" id="setupErr" hidden></p>
+    <div class="row"><button class="primary big" id="btnStart">Start warm-up</button></div>
+  </section>
+
+  <!-- WARM-UP (visitor, weaker language) -->
+  <section id="scrWarm" class="panel" hidden>
+    <div class="row" style="justify-content:space-between"><div><span class="label">Warm-up · 60 seconds</span><h1>Read this aloud in <span id="wLang"></span></h1></div><span class="timer" id="wTimer">1:00</span></div>
+    <p class="visitor-text">Read at a normal speed. Keep reading until the timer ends. If you reach the end, start again from the top.</p>
+    <p class="passage" id="wText"></p>
+    <div class="row"><button class="primary big" id="btnWarmDone">Skip to instructions</button></div>
+  </section>
+
+  <!-- ORIENTATION (visitor, strong language) -->
+  <section id="scrOrient" class="panel" hidden>
+    <h1 id="oTitle"></h1>
+    <p class="visitor-text" id="oIntro"></p>
+    <p class="visitor-text" id="oColour"></p>
+    <div class="rule">
+      <div class="swatch s"><b id="oS"></b><span>🔵</span></div>
+      <div class="swatch w"><b id="oW"></b><span>🔴</span></div>
+    </div>
+    <p class="visitor-text" id="oNote"></p>
+    <div class="row"><button class="primary big" id="btnPractice"></button></div>
+  </section>
+
+  <!-- ROUND INTRO -->
+  <section id="scrIntro" class="panel" hidden>
+    <span class="label" id="iEyebrow"></span>
+    <h2 id="iText"></h2>
+    <div class="row"><button class="primary big" id="btnBegin"></button></div>
+    <p class="keys">Experimenter: press Space (or tap ✓) the moment the visitor starts saying the word. Press X (or tap ✗) for a wrong word, wrong language, or "um".</p>
+  </section>
+
+  <!-- TRIAL -->
+  <section id="scrTrial" class="stage" hidden>
+    <div class="card" id="card"><span class="tag" id="cardTag" hidden></span><span class="prog" id="prog"></span><span id="cardContent" class="fix">+</span></div>
+    <div class="controls">
+      <button class="btn-spoke" id="btnSpoke">✓ Started speaking</button>
+      <button class="btn-error" id="btnError">✗ Error</button>
+    </div>
+    <p class="keys">Space = started speaking · X = error</p>
+  </section>
+
+  <!-- REVIEW (experimenter) -->
+  <section id="scrReview" class="panel" hidden>
+    <div><span class="label">Experimenter check</span><h2 id="rTitle">Round review</h2></div>
+    <p class="small muted">Tick any trial where the visitor said the wrong word, used the wrong language, hesitated, or corrected themselves. Times under 0.25 s or over 5 s are excluded automatically.</p>
+    <div class="scroll"><table><thead><tr><th>#</th><th>Picture</th><th>Expected</th><th>Type</th><th>Time</th><th>Error</th></tr></thead><tbody id="rBody"></tbody></table></div>
+    <div class="row"><button class="primary big" id="btnReviewNext">Continue</button></div>
+  </section>
+
+  <!-- RESULTS (visitor, strong language) -->
+  <section id="scrResults" class="panel" hidden>
+    <div><h1 id="resTitle"></h1><p class="small muted" id="resWho"></p></div>
+    <div class="stats" id="resStats" hidden></div>
+    <h3>Average time per picture</h3>
+    <div class="bars" id="resBars"></div>
+    <h3>Your switching, explained</h3>
+    <div class="verdicts" id="resVerdicts"></div>
+    <div class="chart"><h3>Extra time each switch added</h3>
+      <p class="small muted">Each bar compares switching with staying in the same language. Right of the line means switching was slower; left means it was faster. Anything inside the shaded band (within 15% of your usual naming time) counts as "about the same".</p>
+      <div id="resCost"></div></div>
+    <div class="chart"><h3>Where you sit among visitors</h3>
+      <p class="small muted" id="resBellNote"></p>
+      <div id="resBell"></div></div>
+    <div><h3 id="resMeanTitle"></h3></div>
+    <div class="explain" id="resExplain"></div>
+    <div class="row" id="liveBtns">
+      <button class="primary big" id="btnNext">Next visitor</button>
+      <button class="danger" id="btnDiscard">Don't save this visitor</button>
+    </div>
+    <div class="row" id="viewBtns" hidden>
+      <button class="primary" id="btnViewBack">Back to booth results</button>
+      <button class="danger" id="btnViewDel">Delete this visitor</button>
+      <span id="delConfirm" hidden class="row"><span class="err">Delete this visitor's record?</span><button class="danger" id="btnDelYes">Yes, delete</button><button class="ghost" id="btnDelNo">Cancel</button></span>
+    </div>
+  </section>
+
+  <!-- BOARD -->
+  <section id="scrBoard" class="panel" hidden>
+    <div><span class="label">Live booth results</span><h1>Everyone so far</h1></div>
+    <p class="small muted" id="bCount"></p>
+    <div class="stats" id="bStats" hidden></div>
+    <h3>Average time per picture</h3>
+    <div class="bars" id="bBars"></div>
+    <p class="note" id="bVerdict"></p>
+    <div class="chart"><h3>How visitors are spread out</h3>
+      <p class="small muted" id="bBellNote"></p>
+      <div id="bBell"></div></div>
+    <h3>Visitors</h3>
+    <div class="scroll"><table><thead><tr><th>#</th><th>Name</th><th>Course</th><th>Strong → weak</th><th>Time</th><th>Weaker-language cost</th><th>Switch cost</th><th></th></tr></thead><tbody id="bVisitors"></tbody></table></div>
+    <h3>By strongest language</h3>
+    <div class="scroll"><table><thead><tr><th>Strongest language</th><th>Visitors</th><th>Weaker-language cost</th><th>Switch cost</th></tr></thead><tbody id="bByLang"></tbody></table></div>
+    <div class="row">
+      <button id="btnCopy">Copy data as CSV</button>
+      <button class="ghost" id="btnBack">Back to setup</button>
+      <button class="danger" id="btnClear">Clear all data</button>
+      <span id="clearConfirm" hidden class="row"><span class="err">Delete every saved visitor on this device?</span><button class="danger" id="btnClearYes">Yes, delete</button><button class="ghost" id="btnClearNo">Cancel</button></span>
+    </div>
+    <p class="small muted" id="copyMsg" hidden></p>
+    <textarea id="csvOut" hidden readonly aria-label="CSV data"></textarea>
+  </section>
+</div>
+
+<script>
+const ITEMS={
+ bell:['🔔','bell','loceng','铃'],crab:['🦀','crab','ketam','螃蟹'],snail:['🐌','snail','siput','蜗牛'],eagle:['🦅','eagle','helang','老鹰'],
+ dog:['🐶','dog','anjing','狗'],fish:['🐟','fish','ikan','鱼'],tree:['🌳','tree','pokok','树'],chair:['🪑','chair','kerusi','椅子'],sun:['☀️','sun','matahari','太阳'],
+ house:['🏠','house','rumah','房子'],banana:['🍌','banana','pisang','香蕉'],key:['🔑','key','kunci','钥匙'],eye:['👁️','eye','mata','眼睛'],cow:['🐄','cow','lembu','牛'],
+ cat:['🐱','cat','kucing','猫'],bird:['🐦','bird','burung','鸟'],flower:['🌸','flower','bunga','花'],shoe:['👟','shoe','kasut','鞋子'],moon:['🌙','moon','bulan','月亮'],
+ door:['🚪','door','pintu','门'],egg:['🥚','egg','telur','蛋'],spoon:['🥄','spoon','sudu','汤匙'],hand:['✋','hand','tangan','手'],ear:['👂','ear','telinga','耳朵'],
+ snake:['🐍','snake','ular','蛇'],chicken:['🐔','chicken','ayam','鸡'],elephant:['🐘','elephant','gajah','大象'],mouse:['🐭','mouse','tikus','老鼠'],duck:['🦆','duck','itik','鸭子'],
+ frog:['🐸','frog','katak','青蛙'],bee:['🐝','bee','lebah','蜜蜂'],butterfly:['🦋','butterfly','rama-rama','蝴蝶'],horse:['🐎','horse','kuda','马'],rice:['🍚','rice','nasi','饭'],
+ milk:['🥛','milk','susu','牛奶'],bread:['🍞','bread','roti','面包'],corn:['🌽','corn','jagung','玉米'],watermelon:['🍉','watermelon','tembikai','西瓜'],onion:['🧅','onion','bawang','洋葱'],
+ coconut:['🥥','coconut','kelapa','椰子'],knife:['🔪','knife','pisau','刀'],glasses:['👓','glasses','cermin mata','眼镜'],umbrella:['☂️','umbrella','payung','雨伞'],hat:['🎩','hat','topi','帽子'],
+ clock:['⏰','clock','jam','闹钟'],bed:['🛏️','bed','katil','床'],fire:['🔥','fire','api','火'],star:['⭐','star','bintang','星星'],plane:['✈️','aeroplane','kapal terbang','飞机']};
+const LIDX={en:1,ms:2,zh:3};
+const SETS={practice:['bell','crab','snail','eagle'],
+ r1:['dog','fish','tree','chair','sun','house','banana','key','eye','cow'],
+ r2:['cat','bird','flower','shoe','moon','door','egg','spoon','hand','ear'],
+ r3:['snake','chicken','elephant','mouse','duck','frog','bee','butterfly','horse','rice','milk','bread','corn','watermelon','onion','coconut','knife','glasses','umbrella','hat','clock','bed','fire','star','plane']};
+const SEQ3='SSWSWWWSSSWWSSWWSWSSWWWSS'; // 6 of each: stay-S, switch-to-S, stay-W, switch-to-W
+const NAMES={en:{en:'English',ms:'Malay',zh:'Chinese'},ms:{en:'Bahasa Inggeris',ms:'Bahasa Melayu',zh:'Bahasa Mandarin'},zh:{en:'英语',ms:'马来语',zh:'华语'}};
+const T={
+ en:{title:'Speed Switch Challenge',intro:'You will see pictures one at a time. Say the name of each picture out loud, as fast as you can.',
+  colour:'The background colour tells you which language to use:',note:'Say only the name of the thing, for example "dog". Don\'t worry about mistakes. Being slower in one language is completely normal.',
+  practice:'Start practice',pIntro:'Practice: 4 pictures, not timed for your score.',begin:'Begin',round:'Round {n} of 3',
+  r1:'Every picture is blue. Use {S}.',r2:'Every picture is red. Use {W}.',r3:'The colours are mixed. Switch language whenever the colour changes.',
+  results:'Your results',meanTitle:'What this means',l2:'Weaker-language cost',sw:'Switch cost',swS:'Switch cost into {S}',swW:'Switch cost into {W}',
+  onlyS:'Only {S}',onlyW:'Only {W}',stayS:'Stay in {S}',toS:'Switch into {S}',stayW:'Stay in {W}',toW:'Switch into {W}',sec:'s',
+  e1:'Your weaker language took {x} s longer per picture. Words in a language you use less are slower to find.',
+  e2:'Switching took {x} s longer than staying in the same language. Your brain keeps both languages switched on, so it has to hold one back to use the other (Green, 1998).',
+  e3y:'Switching back into {S} cost you more extra time ({a} s) than switching into {W} ({b} s). While you used {W}, your brain held {S} back harder, so it needed longer to let it go (Meuter & Allport, 1999).',
+  e3n:'Your two switch costs were similar ({a} s for {S}, {b} s for {W}). This often happens in people who use both languages a lot. The asymmetry doesn\'t appear for everyone.',
+  e4:'Being slower in one language is normal. Bilinguals do this juggling all day.'},
+ ms:{title:'Cabaran Tukar Pantas',intro:'Anda akan melihat gambar satu demi satu. Sebut nama setiap gambar dengan kuat, secepat yang boleh.',
+  colour:'Warna latar belakang memberitahu bahasa yang perlu digunakan:',note:'Sebut nama benda itu sahaja, contohnya "anjing". Jangan risau tentang kesilapan. Lebih perlahan dalam satu bahasa adalah perkara biasa.',
+  practice:'Mula latihan',pIntro:'Latihan: 4 gambar, tidak dikira dalam keputusan anda.',begin:'Mula',round:'Pusingan {n} daripada 3',
+  r1:'Semua gambar berwarna biru. Gunakan {S}.',r2:'Semua gambar berwarna merah. Gunakan {W}.',r3:'Warna bercampur. Tukar bahasa setiap kali warna berubah.',
+  results:'Keputusan anda',meanTitle:'Apa maksudnya',l2:'Kos bahasa lemah',sw:'Kos pertukaran',swS:'Kos tukar ke {S}',swW:'Kos tukar ke {W}',
+  onlyS:'{S} sahaja',onlyW:'{W} sahaja',stayS:'Kekal dalam {S}',toS:'Tukar ke {S}',stayW:'Kekal dalam {W}',toW:'Tukar ke {W}',sec:'s',
+  e1:'Bahasa anda yang lebih lemah mengambil masa {x} s lebih lama bagi setiap gambar. Perkataan dalam bahasa yang kurang digunakan lebih lambat ditemui.',
+  e2:'Bertukar bahasa mengambil masa {x} s lebih lama berbanding kekal dalam bahasa yang sama. Otak anda mengaktifkan kedua-dua bahasa, jadi ia perlu menahan satu bahasa untuk menggunakan yang lain (Green, 1998).',
+  e3y:'Bertukar kembali ke {S} memerlukan masa tambahan yang lebih banyak ({a} s) berbanding bertukar ke {W} ({b} s). Semasa anda menggunakan {W}, otak anda menahan {S} dengan lebih kuat, jadi ia perlukan masa lebih lama untuk melepaskannya (Meuter & Allport, 1999).',
+  e3n:'Kos pertukaran anda hampir sama ({a} s untuk {S}, {b} s untuk {W}). Ini biasa berlaku bagi orang yang kerap menggunakan kedua-dua bahasa. Asimetri ini tidak muncul pada semua orang.',
+  e4:'Lebih perlahan dalam satu bahasa adalah normal. Penutur dwibahasa mengimbangi dua bahasa sepanjang hari.'},
+ zh:{title:'极速切换挑战',intro:'图片会一张一张出现。请尽快大声说出图片的名称。',
+  colour:'背景颜色告诉你要用哪种语言：',note:'只说出物品的名称，例如“狗”。不用担心说错。用某一种语言比较慢是完全正常的。',
+  practice:'开始练习',pIntro:'练习：4 张图片，不计入成绩。',begin:'开始',round:'第 {n} 轮（共 3 轮）',
+  r1:'所有图片都是蓝色。请用{S}。',r2:'所有图片都是红色。请用{W}。',r3:'颜色会混合出现。颜色一变，就换语言。',
+  results:'你的结果',meanTitle:'这代表什么',l2:'较弱语言代价',sw:'切换代价',swS:'切换到{S}的代价',swW:'切换到{W}的代价',
+  onlyS:'只用{S}',onlyW:'只用{W}',stayS:'继续用{S}',toS:'切换到{S}',stayW:'继续用{W}',toW:'切换到{W}',sec:'秒',
+  e1:'你的较弱语言每张图片多用了 {x} 秒。较少使用的语言，词汇提取得比较慢。',
+  e2:'切换语言比继续用同一种语言多用了 {x} 秒。大脑会同时启动两种语言，所以用其中一种时，必须压住另一种（Green, 1998）。',
+  e3y:'切换回{S}多花的时间（{a} 秒）比切换到{W}（{b} 秒）更多。你在用{W}时，大脑更用力地压住了{S}，所以需要更久才能把它放开（Meuter & Allport, 1999）。',
+  e3n:'你两种语言的切换代价差不多（{S} {a} 秒，{W} {b} 秒）。经常同时使用两种语言的人常会这样；这种不对称并不会出现在每个人身上。',
+  e4:'用某一种语言比较慢是正常的。双语者每天都在这样切换语言。'}};
+const $=id=>document.getElementById(id);
+const fmt=(s,v)=>s.replace(/\{(\w+)\}/g,(m,k)=>v[k]!==undefined?v[k]:m);
+const STORE='speedswitch.v1';
+function loadAll(){try{return JSON.parse(localStorage.getItem(STORE)||'[]')}catch(e){return[]}}
+function saveAll(a){try{localStorage.setItem(STORE,JSON.stringify(a));return true}catch(e){return false}}
+let records=loadAll();
+let S={};
+let memOnly=false;
+const SCREENS=['scrSetup','scrWarm','scrOrient','scrIntro','scrTrial','scrReview','scrResults','scrBoard'];
+function show(id,step){SCREENS.forEach(s=>$(s).hidden=s!==id);$('chipStep').textContent=step;
+  $('btnStop').hidden=!['scrWarm','scrOrient','scrIntro','scrTrial','scrReview'].includes(id);$('btnBoard').hidden=id!=='scrSetup';window.scrollTo(0,0)}
+function nextVisitorNo(){return records.reduce((m,r)=>Math.max(m,r.visitor),0)+1}
+function refreshChip(){$('chipVisitor').textContent='Visitor #'+(S.visitor||nextVisitorNo())}
+function L(){return T[S.ui]} function nm(c){return NAMES[S.ui][c]}
+function lv(){return{S:nm(S.strong),W:nm(S.weak)}}
+
+// SETUP
+$('btnStart').onclick=()=>{
+  const st=$('selStrong').value,wk=$('selWeak').value,e=$('setupErr');
+  const name=$('inName').value.trim(),course=$('inCourse').value.trim();
+  if(!name||!course){e.textContent='Type the visitor\'s name and course.';e.hidden=false;return}
+  if(st===wk){e.textContent='Choose two different languages.';e.hidden=false;return}
+  if(!$('chkConsent').checked){e.textContent='Tick the consent box after the visitor agrees.';e.hidden=false;return}
+  e.hidden=true;
+  S={visitor:nextVisitorNo(),name,course,strong:st,weak:wk,ui:'en',list:$('selList').value,label:$('chkLabel').checked,trials:[],round:0,saved:false};
+  refreshChip();
+  const t=L(),v=lv();
+  $('oTitle').textContent=t.title;$('oIntro').textContent=t.intro;$('oColour').textContent=t.colour;
+  $('oS').textContent=v.S;$('oW').textContent=v.W;$('oNote').textContent=t.note;$('btnPractice').textContent=t.practice;
+  document.documentElement.lang='en';
+  startWarm();
+};
+const WARM={
+ en:'Every Saturday morning, my family goes to the market near where we live. My mother buys vegetables, fruit and tofu, while my father looks for the best durians. My little brother always asks for a cold drink, and my grandmother tells the sellers stories about when she was young. The market is noisy and crowded, but everyone is friendly. After shopping, we have breakfast together at a small shop. I usually order noodles and hot tea. Then we walk back slowly, carrying heavy bags and talking about our plans for the week.',
+ ms:'Setiap pagi Sabtu, keluarga saya pergi ke pasar berhampiran tempat tinggal kami. Ibu saya membeli sayur-sayuran, buah-buahan dan tauhu, manakala ayah saya mencari durian yang paling sedap. Adik lelaki saya selalu meminta minuman sejuk, dan nenek saya bercerita kepada para peniaga tentang zaman mudanya. Pasar itu bising dan sesak, tetapi semua orang mesra. Selepas membeli-belah, kami bersarapan bersama di sebuah kedai kecil. Saya biasanya memesan mi dan teh panas. Kemudian, kami berjalan pulang perlahan-lahan sambil membawa beg yang berat dan berbual tentang rancangan untuk minggu itu.',
+ zh:'每个星期六早上，我的家人都会去我们住的地方附近的菜市场。妈妈买蔬菜、水果和豆腐，爸爸则去找最好吃的榴椢。我的弟弟总是要一杯冷饮，奶奶会跟摊贩们聊她年轻时的故事。菜市场又吵又挤，但是每个人都很友善。买完东西后，我们一起在一家小店吃早餐。我通常点一碗面和一杯热茶。然后，我们提着重重的袋子，慢慢走回去，一边聊着这个星期的计划。'};
+function startWarm(){
+  $('wLang').textContent=NAMES.en[S.weak];
+  const p=$('wText');p.textContent=WARM[S.weak];p.lang=S.weak;
+  let left=60;$('wTimer').textContent='1:00';$('btnWarmDone').textContent='Skip to instructions';
+  clearInterval(S.warmInt);
+  S.warmInt=setInterval(()=>{left--;
+    if(left<=0){clearInterval(S.warmInt);$('wTimer').textContent='Time!';$('btnWarmDone').textContent='Continue to instructions';return}
+    $('wTimer').textContent='0:'+String(left).padStart(2,'0')},1000);
+  show('scrWarm','Warm-up');
+}
+$('btnWarmDone').onclick=()=>{clearInterval(S.warmInt);show('scrOrient','Orientation')};
+$('btnPractice').onclick=()=>roundIntro(0);
+$('btnStop').onclick=()=>{clearTimeout(S.timer);clearInterval(S.warmInt);S={};$('chkConsent').checked=false;refreshChip();document.documentElement.lang='en';show('scrSetup','Setup')};
+
+// ROUNDS
+function buildRound(r){
+  const A=S.list==='A';let items,langs;
+  if(r===0){items=SETS.practice;langs='SWWS'}
+  else if(r===1){items=A?SETS.r1:SETS.r2;langs='S'.repeat(10)}
+  else if(r===2){items=A?SETS.r2:SETS.r1;langs='W'.repeat(10)}
+  else{items=A?SETS.r3:[...SETS.r3].reverse();langs=SEQ3}
+  return items.map((it,i)=>({round:r,pos:i+1,item:it,lang:langs[i],
+    type:r===3?(i===0?'start':(langs[i]===langs[i-1]?'stay':'switch')):(r===0?'practice':'single'),rt:null,error:false,outlier:false}));
+}
+function roundIntro(r){
+  S.round=r;S.queue=buildRound(r);S.idx=0;
+  const t=L(),v=lv();
+  $('iEyebrow').textContent=r===0?t.pIntro:fmt(t.round,{n:r});
+  $('iText').textContent=r===0?t.r3:fmt(t['r'+r],v);
+  $('btnBegin').textContent=t.begin;
+  show('scrIntro',r===0?'Practice':'Round '+r);
+}
+$('btnBegin').onclick=()=>{show('scrTrial',S.round===0?'Practice':'Round '+S.round);runTrial()};
+function runTrial(){
+  const tr=S.queue[S.idx],card=$('card'),c=$('cardContent');
+  S.awaiting=false;card.className='card';c.className='fix';c.textContent='+';$('cardTag').hidden=true;
+  $('prog').textContent=(S.idx+1)+' / '+S.queue.length;
+  S.timer=setTimeout(()=>{
+    card.className='card '+tr.lang.toLowerCase();c.className='emoji';c.textContent=ITEMS[tr.item][0];
+    if(S.label){$('cardTag').textContent=tr.lang==='S'?nm(S.strong):nm(S.weak);$('cardTag').hidden=false}
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{S.t0=performance.now();S.awaiting=true}));
+  },800);
+}
+function respond(isErr){
+  if(!S.awaiting)return;S.awaiting=false;
+  const tr=S.queue[S.idx];tr.rt=Math.round(performance.now()-S.t0);tr.error=isErr;tr.outlier=tr.rt<250||tr.rt>5000;
+  S.idx++;
+  if(S.idx<S.queue.length){runTrial();return}
+  if(S.round===0){roundIntro(1);return}
+  review();
+}
+$('btnSpoke').onclick=()=>respond(false);$('btnError').onclick=()=>respond(true);
+document.addEventListener('keydown',e=>{
+  if($('scrTrial').hidden)return;
+  if(e.code==='Space'||e.code==='Enter'){e.preventDefault();respond(false)}
+  else if(e.key==='x'||e.key==='X'||e.code==='Backspace'){e.preventDefault();respond(true)}
+});
+
+// REVIEW
+const TYPE_LABEL={single:'Single language',start:'First trial (not counted)',stay:'Stay',switch:'Switch'};
+function review(){
+  $('rTitle').textContent='Round '+S.round+' review';
+  const b=$('rBody');b.textContent='';
+  S.queue.forEach((tr,i)=>{
+    const code=tr.lang==='S'?S.strong:S.weak,row=document.createElement('tr');
+    const typ=tr.type==='single'?TYPE_LABEL.single:(tr.type==='start'?TYPE_LABEL.start:TYPE_LABEL[tr.type]+' → '+NAMES.en[code]);
+    row.innerHTML='<td class="num"></td><td><span class="em"></span></td><td><span class="lang '+tr.lang+'"></span><span class="w"></span></td><td class="t"></td><td class="num"></td><td><input type="checkbox" aria-label="Mark as error"></td>';
+    row.children[0].textContent=tr.pos;row.querySelector('.em').textContent=ITEMS[tr.item][0];
+    row.querySelector('.w').textContent=ITEMS[tr.item][LIDX[code]];row.querySelector('.t').textContent=typ;
+    row.children[4].textContent=(tr.rt/1000).toFixed(2)+' s'+(tr.outlier?' (excluded)':'');
+    const cb=row.querySelector('input');cb.id='err-'+S.round+'-'+i;cb.checked=tr.error;
+    const paint=()=>row.classList.toggle('out',tr.error||tr.outlier||tr.type==='start');
+    cb.onchange=()=>{tr.error=cb.checked;paint()};paint();
+    b.appendChild(row);
+  });
+  $('btnReviewNext').textContent=S.round<3?'Continue to round '+(S.round+1):'Show results';
+  show('scrReview','Check round '+S.round);
+}
+$('btnReviewNext').onclick=()=>{
+  S.trials.push(...S.queue);
+  if(S.round<3){roundIntro(S.round+1)}else{results()}
+};
+
+// STATS
+const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+function stats(trials){
+  const ok=t=>!t.error&&!t.outlier&&t.round>0&&t.type!=='start';
+  const pick=f=>mean(trials.filter(t=>ok(t)&&f(t)).map(t=>t.rt));
+  const s={r1:pick(t=>t.round===1),r2:pick(t=>t.round===2),
+    stayS:pick(t=>t.round===3&&t.type==='stay'&&t.lang==='S'),toS:pick(t=>t.round===3&&t.type==='switch'&&t.lang==='S'),
+    stayW:pick(t=>t.round===3&&t.type==='stay'&&t.lang==='W'),toW:pick(t=>t.round===3&&t.type==='switch'&&t.lang==='W'),
+    stayAll:pick(t=>t.round===3&&t.type==='stay'),swAll:pick(t=>t.round===3&&t.type==='switch')};
+  const d=(a,b)=>a!=null&&b!=null?a-b:null;
+  s.l2=d(s.r2,s.r1);s.sw=d(s.swAll,s.stayAll);s.swS=d(s.toS,s.stayS);s.swW=d(s.toW,s.stayW);
+  return s;
+}
+const sec=ms=>ms==null?'–':(ms/1000).toFixed(2);
+const signed=ms=>ms==null?'–':(ms>=0?'+':'−')+Math.abs(ms/1000).toFixed(2);
+function statTile(label,val,unit){const d=document.createElement('div');d.className='stat';
+  d.innerHTML='<span class="label"></span><span class="v"></span>';d.children[0].textContent=label;d.children[1].textContent=signed(val)+' '+unit;return d}
+function drawBars(el,rows){el.textContent='';const max=Math.max(...rows.map(r=>r.v||0),1);
+  rows.forEach(r=>{const d=document.createElement('div');d.className='barrow';
+    d.innerHTML='<span class="name"></span><div class="track"><div class="fill"></div></div><span class="v"></span>';
+    d.querySelector('.name').textContent=r.n;const f=d.querySelector('.fill');f.className='fill '+r.c+(r.soft?' soft':'');
+    f.style.width=r.v?(r.v/max*100)+'%':'0';d.querySelector('.v').textContent=sec(r.v)+' '+r.u;el.appendChild(d)})}
+
+// CHARTS
+const NS='http://www.w3.org/2000/svg';
+function el(tag,attrs,parent,txt){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(txt!=null)e.textContent=txt;if(parent)parent.appendChild(e);return e}
+function asymScore(s){return s.swS!=null&&s.swW!=null&&s.stayAll?((s.swS-s.swW)/s.stayAll)*100:null}
+function drawCost(box,rows,th){box.textContent='';
+  const W=640,rowH=58,top=26,H=top+rows.length*rowH+30,cx=W/2;
+  const vals=rows.map(r=>Math.abs(r.v||0)).concat([th||0]);const max=Math.max(...vals,150)*1.25,k=(W/2-70)/max;
+  const svg=el('svg',{viewBox:'0 0 '+W+' '+H,role:'img','aria-label':'Extra time each switch added compared with staying'},box);
+  if(th)el('rect',{class:'zone',x:cx-th*k,y:top-6,width:2*th*k,height:rows.length*rowH+6},svg);
+  if(th)el('text',{class:'zonelabel',x:cx,y:top-10,'text-anchor':'middle'},svg,'about the same');
+  rows.forEach((r,i)=>{const y=top+i*rowH;
+    el('text',{class:'strong',x:8,y:y+14},svg,r.n);
+    if(r.v==null){el('text',{x:cx+8,y:y+40},svg,'not enough data');return}
+    const w=Math.abs(r.v)*k,x=r.v>=0?cx:cx-w;
+    el('rect',{class:r.c,x,y:y+24,width:Math.max(w,2),height:24,rx:4},svg);
+    const lab=(r.v>=0?'+':'−')+sec(Math.abs(r.v))+' s';
+    el('text',{class:'strong',x:r.v>=0?cx+w+6:cx-w-6,y:y+41,'text-anchor':r.v>=0?'start':'end'},svg,lab)});
+  el('line',{class:'zero',x1:cx,x2:cx,y1:top-6,y2:top+rows.length*rowH},svg);
+  const by=top+rows.length*rowH+20;
+  el('text',{x:cx-10,y:by,'text-anchor':'end'},svg,'← faster than staying');
+  el('text',{x:cx+10,y:by},svg,'slower than staying →');}
+function drawBell(box,scores,you){box.textContent='';
+  const W=640,H=250,L=20,R=620,base=170;
+  if(!scores.length){const svg=el('svg',{viewBox:'0 0 '+W+' 60'},box);el('text',{x:W/2,y:34,'text-anchor':'middle'},svg,'No visitors yet.');return}
+  const all=scores.concat(you!=null?[you]:[]);
+  let lo=Math.min(-40,...all),hi=Math.max(40,...all);const pad=(hi-lo)*0.12;lo-=pad;hi+=pad;
+  const X=v=>L+(v-lo)/(hi-lo)*(R-L);
+  const svg=el('svg',{viewBox:'0 0 '+W+' '+H,role:'img','aria-label':'Distribution of visitors’ switch asymmetry scores'},box);
+  el('rect',{class:'zone',x:X(-15),y:20,width:X(15)-X(-15),height:base-20},svg);
+  el('text',{class:'zonelabel',x:X(0),y:14,'text-anchor':'middle'},svg,'about equal');
+  if(scores.length>=5){const n=scores.length,m=mean(scores),sd=Math.sqrt(mean(scores.map(x=>(x-m)**2)))||10;
+    const h=Math.max(1.06*sd*Math.pow(n,-0.2),6),pts=[];
+    for(let i=0;i<=140;i++){const x=lo+(hi-lo)*i/140;let d=0;scores.forEach(s=>{const z=(x-s)/h;d+=Math.exp(-0.5*z*z)});pts.push([x,d/(n*h*Math.sqrt(2*Math.PI))])}
+    const ymax=Math.max(...pts.map(p=>p[1])),Y=d=>base-d/ymax*(base-36);
+    const path=pts.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ');
+    el('path',{class:'area',d:path+' L'+X(hi)+' '+base+' L'+X(lo)+' '+base+' Z'},svg);
+    el('path',{class:'curve',d:path},svg)}
+  el('line',{class:'axis',x1:L,x2:R,y1:base,y2:base},svg);
+  const step=(hi-lo)>220?50:20;for(let t=Math.ceil(lo/step)*step;t<=hi;t+=step){el('line',{class:'axis',x1:X(t),x2:X(t),y1:base,y2:base+5},svg);el('text',{x:X(t),y:base+19,'text-anchor':'middle'},svg,(t>0?'+':'')+t+'%')}
+  scores.forEach(s=>el('circle',{class:'dot',cx:X(s),cy:base-7,r:5},svg));
+  if(you!=null){el('line',{class:'you',x1:X(you),x2:X(you),y1:30,y2:base},svg);el('text',{class:'youlabel',x:X(you),y:26,'text-anchor':'middle'},svg,'You')}
+  el('text',{x:L,y:base+44},svg,'← switching into weaker was harder');
+  el('text',{x:R,y:base+44,'text-anchor':'end'},svg,'switching back into strongest was harder →');
+  el('text',{x:R,y:base+62,'text-anchor':'end','font-size':'12'},svg,'(the predicted side)');}
+
+// RESULTS
+function results(){
+  if(!S.saved){records.push({visitor:S.visitor,name:S.name,course:S.course,when:new Date().toISOString(),strong:S.strong,weak:S.weak,list:S.list,trials:S.trials});
+    memOnly=!saveAll(records);S.saved=true}
+  renderResults(records.find(r=>r.visitor===S.visitor),false);
+}
+function renderResults(rec,fromBoard){
+  const s=stats(rec.trials),t=T.en,v={S:NAMES.en[rec.strong],W:NAMES.en[rec.weak]},u=t.sec;
+  document.documentElement.lang='en';
+  $('resWho').textContent='Visitor #'+rec.visitor+' · '+(rec.name||'No name')+' · '+(rec.course||'No course')+' · '+v.S+' strongest, '+v.W+' weaker · '+new Date(rec.when).toLocaleString();
+  $('liveBtns').hidden=fromBoard;$('viewBtns').hidden=!fromBoard;$('delConfirm').hidden=true;S.viewing=rec.visitor;
+  $('resTitle').textContent=t.results;$('resMeanTitle').textContent=t.meanTitle;
+  const st=$('resStats');st.textContent='';
+  st.append(statTile(t.l2,s.l2,u),statTile(t.sw,s.sw,u),statTile(fmt(t.swS,v),s.swS,u),statTile(fmt(t.swW,v),s.swW,u));
+  drawBars($('resBars'),[
+    {n:'Speaking '+v.S,v:s.r1,c:'S',u},{n:'Speaking '+v.W,v:s.r2,c:'W',u},
+    {n:'Switching '+v.W+' → '+v.S,v:s.toS,c:'S',soft:true,u},{n:'Switching '+v.S+' → '+v.W,v:s.toW,c:'W',soft:true,u}]);
+  const ex=$('resExplain');ex.textContent='';
+  const add=(txt,key)=>{const p=document.createElement('p');p.textContent=txt;if(key)p.className='key';ex.appendChild(p)};
+  const th=s.stayAll!=null?0.15*s.stayAll:null;
+  // verdict cards
+  const vd=$('resVerdicts');vd.textContent='';
+  const card=(title,o)=>{const c=document.createElement('div');c.className='verdict '+o.cls;
+    c.innerHTML='<span class="vt"></span><span class="vb"></span><span class="small"></span>';
+    c.children[0].textContent=title;c.children[1].textContent=o.big;c.children[2].textContent=o.text;vd.appendChild(c)};
+  const dir=(cost,lang)=>{
+    if(cost==null||th==null)return{cls:'same',big:'Not enough data',text:'Too many trials were excluded to measure this.'};
+    if(cost>th)return{cls:'slow',big:sec(cost)+' s longer',text:'than staying in '+lang+'. Switching into '+lang+' slowed you down.'};
+    if(cost<-th)return{cls:'fast',big:sec(-cost)+' s shorter',text:'than staying in '+lang+'. Switching into '+lang+' did not slow you down this time.'};
+    return{cls:'same',big:'About the same',text:'as staying in '+lang+' (within 15% of your usual naming time).'}};
+  card('Switching '+v.W+' → '+v.S,dir(s.swS,v.S));
+  card('Switching '+v.S+' → '+v.W,dir(s.swW,v.W));
+  let asym='na';
+  if(s.swS!=null&&s.swW!=null&&th!=null){const d=s.swS-s.swW;
+    if(d>th){asym='pred';card('Which switch is harder?',{cls:'pred',big:'Back into '+v.S,text:'It added '+sec(d)+' s more extra time than switching into '+v.W+'. This matches the prediction (Meuter & Allport, 1999).'})}
+    else if(-d>th){asym='opp';card('Which switch is harder?',{cls:'slow',big:'Into '+v.W,text:'It added '+sec(-d)+' s more extra time than switching back into '+v.S+'. This is the opposite of the prediction.'})}
+    else{asym='sym';card('Which switch is harder?',{cls:'same',big:'About equal',text:'The two switches differed by less than 15% of your usual naming time, so we count them as symmetric.'})}}
+  drawCost($('resCost'),[{n:'Switching '+v.W+' → '+v.S,v:s.swS,c:'bS'},{n:'Switching '+v.S+' → '+v.W,v:s.swW,c:'bW'}],th);
+  const scores=records.map(r=>asymScore(stats(r.trials))).filter(x=>x!=null),you=asymScore(s);
+  drawBell($('resBell'),scores,you);
+  $('resBellNote').textContent='Each visitor gets one score: how much harder switching back into the strongest language was, compared with switching into the weaker one, as a % of their usual naming time. The shaded middle is "about equal". The red line is you. '+(scores.length<5?'The curve appears once 5 visitors have played; for now each dot is one visitor.':'The curve shows how all '+scores.length+' visitors are spread out; each dot is one visitor.');
+  // plain-language explanation
+  if(s.l2!=null&&s.r1!=null){const t2=0.15*s.r1;
+    if(s.l2>t2)add('Your weaker language ('+v.W+') was slower: about '+sec(s.l2)+' s longer per picture than '+v.S+'. Words in a language you use less are slower to find.');
+    else if(s.l2<-t2)add('You were actually faster in '+v.W+' than '+v.S+' this time. Your "weaker" language may be stronger than you think, or the 60-second warm-up gave it a boost.');
+    else add('You named pictures about equally fast in '+v.S+' and '+v.W+' (difference under 15%), so your two languages are fairly balanced for everyday words.')}
+  if(asym==='pred')add('Why switching back into '+v.S+' was harder: while you used '+v.W+', your brain had to hold '+v.S+' back strongly, so it needed extra time to release it (Green, 1998; Meuter & Allport, 1999).',true);
+  else if(asym==='opp')add('Switching into your weaker language cost you more. That is the opposite of the prediction. With only six pictures of each type, one slow answer can change the result, which is why we also look at the group average.',true);
+  else if(asym==='sym')add('Your two switches cost about the same. This is common in people who use both languages often, because neither language needs to be held back much harder than the other (Costa & Santesteban, 2004).',true);
+  add(t.e4);
+  show('scrResults',fromBoard?'Visitor record':'Results');
+}
+$('btnViewBack').onclick=()=>board();
+$('btnViewDel').onclick=()=>{$('delConfirm').hidden=false};
+$('btnDelNo').onclick=()=>{$('delConfirm').hidden=true};
+$('btnDelYes').onclick=()=>{records=records.filter(r=>r.visitor!==S.viewing);saveAll(records);board()};
+$('btnNext').onclick=()=>{S={};$('chkConsent').checked=false;$('inName').value='';$('inCourse').value='';$('selList').value=$('selList').value==='A'?'B':'A';
+  refreshChip();document.documentElement.lang='en';show('scrSetup','Setup')};
+$('btnDiscard').onclick=()=>{records=records.filter(r=>r.visitor!==S.visitor);saveAll(records);$('btnNext').onclick()};
+
+// BOARD
+function board(){
+  const per=records.map(r=>({r,s:stats(r.trials)}));
+  const avg=k=>mean(per.map(p=>p.s[k]).filter(x=>x!=null));
+  $('bCount').textContent=records.length+' visitor'+(records.length===1?'':'s')+' saved on this device'+(memOnly?' (browser storage is blocked here, so data lasts only until this page closes; copy the CSV before closing)':'')+'. Averages use correct trials only.';
+  const st=$('bStats');st.textContent='';
+  st.append(statTile('Weaker-language cost',avg('l2'),'s'),statTile('Switch cost',avg('sw'),'s'),
+    statTile('Switch cost into strong',avg('swS'),'s'),statTile('Switch cost into weak',avg('swW'),'s'));
+  drawBars($('bBars'),[{n:'Speaking strongest language',v:avg('r1'),c:'S',u:'s'},{n:'Speaking weaker language',v:avg('r2'),c:'W',u:'s'},
+    {n:'Switching weaker → strongest',v:avg('toS'),c:'S',soft:true,u:'s'},{n:'Switching strongest → weaker',v:avg('toW'),c:'W',soft:true,u:'s'}]);
+  const a=avg('swS'),b=avg('swW');
+  $('bVerdict').textContent=records.length<1?'No visitors yet. Results appear here after the first visitor finishes.':
+    (a!=null&&b!=null?(()=>{const th=0.15*(avg('stayAll')||0),d=a-b,x=sec(Math.abs(d));
+      if(d>th)return 'So far, switching back into the strongest language costs '+x+' s more extra time than switching into the weaker one. That is above our 15% cut-off, so it matches the asymmetric switch cost (Meuter & Allport, 1999).';
+      if(-d>th)return 'So far, switching into the weaker language costs '+x+' s more extra time than switching back into the strongest one. That is above our 15% cut-off but in the opposite direction to the prediction.';
+      return 'So far, the two switches cost about the same extra time (difference under our 15% cut-off), so the result counts as symmetric. This is common in people who use both languages often (Costa & Santesteban, 2004).'})():'');
+  const bs=per.map(p=>asymScore(p.s)).filter(x=>x!=null);
+  drawBell($('bBell'),bs,null);
+  if(bs.length){const right=bs.filter(x=>x>15).length,mid=bs.filter(x=>Math.abs(x)<=15).length,left=bs.filter(x=>x<-15).length;
+    $('bBellNote').textContent='Each dot is one visitor’s score: how much harder switching back into their strongest language was than switching into their weaker one, as a % of their usual naming time. '+right+' on the predicted side, '+mid+' about equal, '+left+' on the opposite side.'+(bs.length<5?' The curve appears once 5 visitors have played.':'')}
+  else $('bBellNote').textContent='';
+  const tb=$('bByLang');tb.textContent='';
+  ['en','ms','zh'].forEach(c=>{const g=per.filter(p=>p.r.strong===c);if(!g.length)return;
+    const tr=document.createElement('tr');tr.innerHTML='<td></td><td class="num"></td><td class="num"></td><td class="num"></td>';
+    tr.children[0].textContent=NAMES.en[c];tr.children[1].textContent=g.length;
+    tr.children[2].textContent=signed(mean(g.map(p=>p.s.l2).filter(x=>x!=null)))+' s';
+    tr.children[3].textContent=signed(mean(g.map(p=>p.s.sw).filter(x=>x!=null)))+' s';tb.appendChild(tr)});
+  const vb=$('bVisitors');vb.textContent='';
+  [...per].reverse().forEach(p=>{const tr=document.createElement('tr');
+    tr.innerHTML='<td class="num"></td><td></td><td></td><td></td><td></td><td class="num"></td><td class="num"></td><td><button class="small">View</button></td>';
+    const c=tr.children;c[0].textContent=p.r.visitor;c[1].textContent=p.r.name||'–';c[2].textContent=p.r.course||'–';
+    c[3].textContent=NAMES.en[p.r.strong]+' → '+NAMES.en[p.r.weak];c[4].textContent=new Date(p.r.when).toLocaleString([], {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+    c[5].textContent=signed(p.s.l2)+' s';c[6].textContent=signed(p.s.sw)+' s';
+    c[7].querySelector('button').onclick=()=>renderResults(p.r,true);vb.appendChild(tr)});
+  if(!per.length){const tr=document.createElement('tr');tr.innerHTML='<td colspan="8" class="muted">No visitors yet.</td>';vb.appendChild(tr)}
+  $('csvOut').hidden=true;$('copyMsg').hidden=true;$('clearConfirm').hidden=true;
+  show('scrBoard','Booth results');
+}
+$('btnBoard').onclick=board;$('btnBack').onclick=()=>show('scrSetup','Setup');
+const q=x=>{x=String(x??'');return /[",\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x};
+function csv(){const rows=[['visitor','name','course','time','strong','weak','list','round','position','picture','target_language','trial_type','rt_ms','error','auto_excluded']];
+  records.forEach(r=>r.trials.forEach(t=>rows.push([r.visitor,r.name,r.course,r.when,r.strong,r.weak,r.list,t.round,t.pos,t.item,t.lang==='S'?r.strong:r.weak,t.type,t.rt,t.error?1:0,t.outlier?1:0])));
+  return rows.map(x=>x.map(q).join(',')).join('\n')}
+$('btnCopy').onclick=()=>{const text=csv(),m=$('copyMsg'),ta=$('csvOut');
+  navigator.clipboard.writeText(text).then(()=>{m.textContent='Copied. Paste it into Excel or Google Sheets.';m.hidden=false})
+  .catch(()=>{ta.value=text;ta.hidden=false;ta.focus();ta.select();m.textContent='Copy was blocked here, so the data is shown below and selected. Copy it manually.';m.hidden=false})};
+$('btnClear').onclick=()=>{$('clearConfirm').hidden=false};
+$('btnClearNo').onclick=()=>{$('clearConfirm').hidden=true};
+$('btnClearYes').onclick=()=>{records=[];saveAll(records);board();refreshChip()};
+refreshChip();
+</script>
+
+</body>
+</html>
