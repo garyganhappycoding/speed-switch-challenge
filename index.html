@@ -560,8 +560,14 @@ function renderResults(rec,fromBoard){
     else{asym='sym';card('Which switch is harder?',{cls:'same',big:'About equal',text:'The two switches differed by less than 15% of your usual naming time, so we count them as symmetric.'})}}
   drawCost($('resCost'),[{n:'Switching '+v.W+' → '+v.S,v:s.swS,c:'bS'},{n:'Switching '+v.S+' → '+v.W,v:s.swW,c:'bW'}],th);
   const scores=records.map(r=>asymScore(stats(r.trials))).filter(x=>x!=null),you=asymScore(s);
-  drawBell($('resBell'),scores,you);
-  $('resBellNote').textContent='Each visitor gets one score: how much harder switching back into the strongest language was, compared with switching into the weaker one, as a % of their usual naming time. The shaded middle is "about equal". The red line is you. '+(scores.length<5?'The curve appears once 5 visitors have played; for now each dot is one visitor.':'The curve shows how all '+scores.length+' visitors are spread out; each dot is one visitor.');
+  const side=you==null?null:(you>15?'pred':(you<-15?'opp':'mid'));
+  const sideText=side==='pred'?'You are on the predicted side: switching back into '+v.S+' was harder for you than switching into '+v.W+'.':
+    side==='opp'?'You are on the opposite side to the prediction: switching into '+v.W+' was harder for you than switching back into '+v.S+'.':
+    side==='mid'?'You are in the middle: both switches were about equally hard for you (within 15%).':'We could not place you, because too many trials were excluded.';
+  if(scores.length<5){$('resBell').textContent='';$('resBell').hidden=true;
+    $('resBellNote').textContent=sideText;$('resBellNote').className='visitor-text';}
+  else{$('resBell').hidden=false;drawBell($('resBell'),scores,you);$('resBellNote').className='small muted';
+    $('resBellNote').textContent=sideText+' Each visitor gets one score: how much harder switching back into the strongest language was, compared with switching into the weaker one, as a % of their usual naming time. The shaded middle is "about equal", the red line is you, and each dot is one of the '+scores.length+' visitors so far.';}
   // plain-language explanation
   if(s.l2!=null&&s.r1!=null){const t2=0.15*s.r1;
     if(s.l2>t2)add('Your weaker language ('+v.W+') was slower: about '+sec(s.l2)+' s longer per picture than '+v.S+'. Words in a language you use less are slower to find.');
@@ -598,9 +604,9 @@ function board(){
       if(-d>th)return 'So far, switching into the weaker language costs '+x+' s more extra time than switching back into the strongest one. That is above our 15% cut-off but in the opposite direction to the prediction.';
       return 'So far, the two switches cost about the same extra time (difference under our 15% cut-off), so the result counts as symmetric. This is common in people who use both languages often (Costa & Santesteban, 2004).'})():'');
   const bs=per.map(p=>asymScore(p.s)).filter(x=>x!=null);
-  drawBell($('bBell'),bs,null);
+  if(bs.length>=5){$('bBell').hidden=false;drawBell($('bBell'),bs,null)}else{$('bBell').textContent='';$('bBell').hidden=true}
   if(bs.length){const right=bs.filter(x=>x>15).length,mid=bs.filter(x=>Math.abs(x)<=15).length,left=bs.filter(x=>x<-15).length;
-    $('bBellNote').textContent='Each dot is one visitor’s score: how much harder switching back into their strongest language was than switching into their weaker one, as a % of their usual naming time. '+right+' on the predicted side, '+mid+' about equal, '+left+' on the opposite side.'+(bs.length<5?' The curve appears once 5 visitors have played.':'')}
+    $('bBellNote').textContent='Each dot is one visitor’s score: how much harder switching back into their strongest language was than switching into their weaker one, as a % of their usual naming time. '+right+' on the predicted side, '+mid+' about equal, '+left+' on the opposite side.'+(bs.length<5?' The graph appears once 5 visitors have played.':'')}
   else $('bBellNote').textContent='';
   const tb=$('bByLang');tb.textContent='';
   ['en','ms','zh'].forEach(c=>{const g=per.filter(p=>p.r.strong===c);if(!g.length)return;
