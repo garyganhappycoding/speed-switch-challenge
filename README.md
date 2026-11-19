@@ -7,4 +7,6 @@ Visitors warm up in their weaker language, name colour-cued pictures in their st
 and see their results, including whether switching back into their strongest language cost more extra time.
 
 - Single static page: `index.html` (no build step)
-- Visitor data is stored only in the browser of the device running the booth. Use **Copy data as CSV** to export.
+- Visitor results are saved to a shared Supabase database (table `speedswitch_visitors`), so every device that opens the link adds to the same booth results. Results are also kept on the device and uploaded automatically if the internet drops.
+- Names and courses are only visible on the Booth results page after entering the booth PIN. Visitors' own results pages only see anonymous scores from other visitors.
+- Use **Copy data as CSV** on the Booth results page to export everything.

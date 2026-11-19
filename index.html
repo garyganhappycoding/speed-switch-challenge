@@ -181,7 +181,8 @@ textarea{width:100%;min-height:120px;font-family:var(--f-mono);font-size:.8rem;b
   <header class="bar">
     <div class="brand"><b>Speed Switch Challenge</b><span class="muted small">PSY 111 · Bilingualism booth</span></div>
     <div class="row">
-      <span class="chip" id="chipVisitor">Visitor #1</span>
+      <span class="chip" id="chipVisitor">New visitor</span>
+      <span class="chip" id="chipSync">Connecting…</span>
       <span class="chip" id="chipStep">Setup</span>
       <button class="ghost small" id="btnBoard">Booth results</button>
       <button class="ghost small" id="btnStop" hidden>End session</button>
@@ -224,7 +225,7 @@ textarea{width:100%;min-height:120px;font-family:var(--f-mono);font-size:.8rem;b
         <span class="small muted">Alternate A and B between visitors so picture difficulty doesn't favour one language.</span></div>
     </div>
     <label class="check" for="chkLabel"><input type="checkbox" id="chkLabel"><span>Show the language name on each card (only for visitors who can't tell blue from red)</span></label>
-    <label class="check" for="chkConsent"><input type="checkbox" id="chkConsent"><span>Visitor agreed to be timed and to have their name, course and results kept for our booth records only. They can stop at any time.</span></label>
+    <label class="check" for="chkConsent"><input type="checkbox" id="chkConsent"><span>Visitor agreed to be timed and to have their name, course and results saved in our booth's online database (used by our group only). They can stop at any time.</span></label>
     <p class="note">After you press Start, the visitor reads a short passage <b>aloud</b> in their <b>weaker</b> language for 60 seconds. All instructions and results are in English.</p>
     <p class="err" id="setupErr" hidden></p>
     <div class="row"><button class="primary big" id="btnStart">Start warm-up</button><button class="ghost" id="btnHome" type="button">Back to welcome screen</button></div>
@@ -308,6 +309,8 @@ textarea{width:100%;min-height:120px;font-family:var(--f-mono);font-size:.8rem;b
   <section id="scrBoard" class="panel" hidden>
     <div><span class="label">Live booth results</span><h1>Everyone so far</h1></div>
     <p class="small muted" id="bCount"></p>
+    <div class="row" id="pinBox"><label class="label" for="inPin">Booth PIN</label><input type="password" id="inPin" inputmode="numeric" autocomplete="off" placeholder="6 digits" style="width:9em"><button class="primary" id="btnPin" type="button">Show names</button><span class="small" id="pinMsg"></span></div>
+    <div class="row" id="lockBox" hidden><span class="small muted">Names are unlocked on this device.</span><button class="ghost small" id="btnLock" type="button">Lock again</button></div>
     <div class="stats" id="bStats" hidden></div>
     <h3>Average time per picture</h3>
     <div class="bars" id="bBars"></div>
@@ -323,7 +326,7 @@ textarea{width:100%;min-height:120px;font-family:var(--f-mono);font-size:.8rem;b
       <button id="btnCopy">Copy data as CSV</button>
       <button class="ghost" id="btnBack">Back to setup</button>
       <button class="danger" id="btnClear">Clear all data</button>
-      <span id="clearConfirm" hidden class="row"><span class="err">Delete every saved visitor on this device?</span><button class="danger" id="btnClearYes">Yes, delete</button><button class="ghost" id="btnClearNo">Cancel</button></span>
+      <span id="clearConfirm" hidden class="row"><span class="err">Delete every visitor from the online database, on all devices?</span><button class="danger" id="btnClearYes">Yes, delete</button><button class="ghost" id="btnClearNo">Cancel</button></span>
     </div>
     <p class="small muted" id="copyMsg" hidden></p>
     <textarea id="csvOut" hidden readonly aria-label="CSV data"></textarea>
@@ -388,14 +391,47 @@ const fmt=(s,v)=>s.replace(/\{(\w+)\}/g,(m,k)=>v[k]!==undefined?v[k]:m);
 const STORE='speedswitch.v1';
 function loadAll(){try{return JSON.parse(localStorage.getItem(STORE)||'[]')}catch(e){return[]}}
 function saveAll(a){try{localStorage.setItem(STORE,JSON.stringify(a));return true}catch(e){return false}}
-let records=loadAll();
+// ---- shared online storage (Supabase) ----
+const API='https://xzdfidosiliclmdvugci.supabase.co/rest/v1/rpc/',KEY='sb_publishable_JmGF3B2LdozGM9WDeAVEGA_xucGY2b_',PINKEY='speedswitch.pin';
+const uuid=()=>{try{if(crypto.randomUUID)return crypto.randomUUID()}catch(e){}return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)})};
+async function rpc(fn,body){const r=await fetch(API+fn,{method:'POST',headers:{'apikey':KEY,'Content-Type':'application/json'},body:JSON.stringify(body||{})});
+  const txt=await r.text();let j=null;try{j=txt?JSON.parse(txt):null}catch(e){}
+  if(!r.ok){const e=new Error((j&&(j.message||j.hint))||('HTTP '+r.status));e.status=r.status;throw e}return j}
+// visitors saved on this device (legacy records from before online saving stay on this device only)
+let mine=loadAll().map(r=>r.cid?r:{...r,cid:uuid(),synced:false,localOnly:true});
+let remote=[],remoteMode='none',online=null,syncing=false;
+let pin=(()=>{try{return localStorage.getItem(PINKEY)||''}catch(e){return''}})();
+let records=[];
+function rebuild(){const bySid={},byCid={};mine.forEach(r=>{if(r.sid!=null)bySid[r.sid]=r;byCid[r.cid]=r});
+  const used=new Set();const out=remote.map(r=>{const m=(r.cid&&byCid[r.cid])||(r.sid!=null&&bySid[r.sid]);if(m){used.add(m.cid);return{...r,...m,sid:r.sid,visitor:r.sid}}return r});
+  mine.forEach(m=>{if(!used.has(m.cid))out.push(m)});
+  out.sort((a,b)=>(a.sid??1e12)-(b.sid??1e12)||String(a.when||'').localeCompare(String(b.when||'')));records=out}
+function syncChip(){const p=mine.filter(r=>!r.synced&&!r.localOnly).length,c=$('chipSync');
+  c.textContent=online===false?('Offline'+(p?' · '+p+' waiting to upload':'')):(online===null?'Connecting…':(p?'Uploading '+p+'…':'Online · saved'))}
+async function syncPending(){if(syncing)return;syncing=true;
+  try{for(const r of mine.filter(r=>!r.synced&&!r.localOnly)){
+    try{const id=await rpc('speedswitch_submit',{p_cid:r.cid,p_name:r.name||null,p_course:r.course||null,p_strong:r.strong,p_weak:r.weak,p_list:r.list||null,p_trials:r.trials});
+      r.sid=id;r.visitor=id;r.synced=true;online=true;
+      if(!mine.includes(r))rpc('speedswitch_delete',{p_cid:r.cid}).catch(()=>{});
+    }catch(e){if(!e.status)online=false;break}}
+  }finally{syncing=false;saveAll(mine);rebuild();syncChip()}}
+async function fetchRemote(){
+  try{let done=false;
+    if(pin){try{const rows=await rpc('speedswitch_records',{p_pin:pin});
+        remote=(rows||[]).map(x=>({sid:x.id,visitor:x.id,cid:x.client_id,when:x.created_at,name:x.name,course:x.course,strong:x.strong,weak:x.weak,list:x.list,trials:x.trials,synced:true}));remoteMode='full';done=true}
+      catch(e){if(/invalid_pin/.test(e.message)){pin='';try{localStorage.removeItem(PINKEY)}catch(_){}}else throw e}}
+    if(!done){const rows=await rpc('speedswitch_scores');
+      remote=(rows||[]).map(x=>({sid:x.id,visitor:x.id,strong:x.strong,weak:x.weak,trials:x.trials,remoteOnly:true,synced:true}));remoteMode='scores'}
+    online=true}catch(e){online=false}
+  rebuild();syncChip()}
+const refresh=()=>syncPending().then(fetchRemote);
 let S={};
 let memOnly=false;
 const SCREENS=['scrWelcome','scrSetup','scrWarm','scrOrient','scrIntro','scrTrial','scrReview','scrResults','scrBoard'];
 function show(id,step){SCREENS.forEach(s=>$(s).hidden=s!==id);document.body.classList.toggle('attract',id==='scrWelcome');$('chipStep').textContent=step;
   $('btnStop').hidden=!['scrWarm','scrOrient','scrIntro','scrTrial','scrReview'].includes(id);$('btnBoard').hidden=id!=='scrSetup';window.scrollTo(0,0)}
 function nextVisitorNo(){return records.reduce((m,r)=>Math.max(m,r.visitor),0)+1}
-function refreshChip(){$('chipVisitor').textContent='Visitor #'+(S.visitor||nextVisitorNo())}
+function refreshChip(){$('chipVisitor').textContent=S.sid?'Visitor #'+S.sid:'New visitor'}
 function L(){return T[S.ui]} function nm(c){return NAMES[S.ui][c]}
 function lv(){return{S:nm(S.strong),W:nm(S.weak)}}
 
@@ -407,7 +443,7 @@ $('btnStart').onclick=()=>{
   if(st===wk){e.textContent='Choose two different languages.';e.hidden=false;return}
   if(!$('chkConsent').checked){e.textContent='Tick the consent box after the visitor agrees.';e.hidden=false;return}
   e.hidden=true;
-  S={visitor:nextVisitorNo(),name,course,strong:st,weak:wk,ui:'en',list:$('selList').value,label:$('chkLabel').checked,trials:[],round:0,saved:false};
+  S={cid:uuid(),visitor:null,name,course,strong:st,weak:wk,ui:'en',list:$('selList').value,label:$('chkLabel').checked,trials:[],round:0,saved:false};
   refreshChip();
   const t=L(),v=lv();
   $('oTitle').textContent=t.title;$('oIntro').textContent=t.intro;$('oColour').textContent=t.colour;
@@ -572,15 +608,17 @@ function drawBell(box,scores,you){box.textContent='';
 
 // RESULTS
 function results(){
-  if(!S.saved){records.push({visitor:S.visitor,name:S.name,course:S.course,when:new Date().toISOString(),strong:S.strong,weak:S.weak,list:S.list,trials:S.trials});
-    memOnly=!saveAll(records);S.saved=true}
-  renderResults(records.find(r=>r.visitor===S.visitor),false);
+  if(!S.saved){mine.push({cid:S.cid,sid:null,visitor:null,synced:false,name:S.name,course:S.course,when:new Date().toISOString(),strong:S.strong,weak:S.weak,list:S.list,trials:S.trials});
+    memOnly=!saveAll(mine);S.saved=true;rebuild()}
+  const cur=()=>records.find(r=>r.cid===S.cid);
+  renderResults(cur(),false);
+  refresh().then(()=>{const r=cur();if(r){S.sid=r.sid;refreshChip()}if(r&&!$('scrResults').hidden&&S.viewing===S.cid)renderResults(r,false,true)});
 }
-function renderResults(rec,fromBoard){
+function renderResults(rec,fromBoard,quiet){
   const s=stats(rec.trials),t=T.en,v={S:NAMES.en[rec.strong],W:NAMES.en[rec.weak]},u=t.sec;
   document.documentElement.lang='en';
-  $('resWho').textContent='Visitor #'+rec.visitor+' · '+(rec.name||'No name')+' · '+(rec.course||'No course')+' · '+v.S+' strongest, '+v.W+' weaker · '+new Date(rec.when).toLocaleString();
-  $('liveBtns').hidden=fromBoard;$('viewBtns').hidden=!fromBoard;$('delConfirm').hidden=true;S.viewing=rec.visitor;
+  $('resWho').textContent=(rec.sid!=null?'Visitor #'+rec.sid:'Visitor (not uploaded yet)')+' · '+(rec.name||(rec.remoteOnly?'Name hidden (enter the booth PIN)':'No name'))+' · '+(rec.course||(rec.remoteOnly?'':'No course'))+' · '+v.S+' strongest, '+v.W+' weaker'+(rec.when?' · '+new Date(rec.when).toLocaleString():'');
+  $('liveBtns').hidden=fromBoard;$('viewBtns').hidden=!fromBoard;$('delConfirm').hidden=true;S.viewing=rec.cid||('s'+rec.sid);S.viewingRec=rec;$('btnViewDel').hidden=!rec.cid;
   $('resTitle').textContent=t.results;$('resMeanTitle').textContent=t.meanTitle;
   const st=$('resStats');st.textContent='';
   st.append(statTile(t.l2,s.l2,u),statTile(t.sw,s.sw,u),statTile(fmt(t.swS,v),s.swS,u),statTile(fmt(t.swW,v),s.swW,u));
@@ -626,21 +664,26 @@ function renderResults(rec,fromBoard){
   else if(asym==='opp')add('Switching into your weaker language cost you more. That is the opposite of the prediction. With only six pictures of each type, one slow answer can change the result, which is why we also look at the group average.',true);
   else if(asym==='sym')add('Your two switches cost about the same. This is common in people who use both languages often, because neither language needs to be held back much harder than the other (Costa & Santesteban, 2004).',true);
   add(t.e4);
-  show('scrResults',fromBoard?'Visitor record':'Results');
+  if(!quiet)show('scrResults',fromBoard?'Visitor record':'Results');
 }
 $('btnViewBack').onclick=()=>board();
 $('btnViewDel').onclick=()=>{$('delConfirm').hidden=false};
 $('btnDelNo').onclick=()=>{$('delConfirm').hidden=true};
-$('btnDelYes').onclick=()=>{records=records.filter(r=>r.visitor!==S.viewing);saveAll(records);board()};
+async function removeRec(rec){mine=mine.filter(r=>r.cid!==rec.cid);remote=remote.filter(r=>!(rec.cid&&r.cid===rec.cid)&&!(rec.sid!=null&&r.sid===rec.sid));saveAll(mine);rebuild();
+  if(rec.cid)try{await rpc('speedswitch_delete',{p_cid:rec.cid})}catch(e){}}
+$('btnDelYes').onclick=()=>{removeRec(S.viewingRec).then(board)};
 $('btnNext').onclick=()=>{S={};$('chkConsent').checked=false;$('inName').value='';$('inCourse').value='';$('selList').value=$('selList').value==='A'?'B':'A';
   refreshChip();document.documentElement.lang='en';show('scrWelcome','Welcome')};
-$('btnDiscard').onclick=()=>{records=records.filter(r=>r.visitor!==S.visitor);saveAll(records);$('btnNext').onclick()};
+$('btnDiscard').onclick=()=>{const rec=records.find(r=>r.cid===S.cid)||{cid:S.cid};removeRec(rec);$('btnNext').onclick()};
 
 // BOARD
-function board(){
+function board(){renderBoard();show('scrBoard','Booth results');refresh().then(()=>{if(!$('scrBoard').hidden)renderBoard()})}
+function renderBoard(){
   const per=records.map(r=>({r,s:stats(r.trials)}));
   const avg=k=>mean(per.map(p=>p.s[k]).filter(x=>x!=null));
-  $('bCount').textContent=records.length+' visitor'+(records.length===1?'':'s')+' saved on this device'+(memOnly?' (browser storage is blocked here, so data lasts only until this page closes; copy the CSV before closing)':'')+'. Averages use correct trials only.';
+  const pending=mine.filter(r=>!r.synced&&!r.localOnly).length;
+  $('bCount').textContent=records.length+' visitor'+(records.length===1?'':'s')+(online===false?' (offline: showing what this device has; it will upload when the internet is back)':' from all booth devices')+(pending?' · '+pending+' still uploading':'')+'. Averages use correct trials only.'+(remoteMode==='full'?'':' Enter the booth PIN to see names and courses.');
+  $('pinBox').hidden=remoteMode==='full';$('lockBox').hidden=remoteMode!=='full';$('btnClear').hidden=remoteMode!=='full';
   const st=$('bStats');st.textContent='';
   st.append(statTile('Weaker-language cost',avg('l2'),'s'),statTile('Switch cost',avg('sw'),'s'),
     statTile('Switch cost into strong',avg('swS'),'s'),statTile('Switch cost into weak',avg('swW'),'s'));
@@ -666,31 +709,38 @@ function board(){
   const vb=$('bVisitors');vb.textContent='';
   [...per].reverse().forEach(p=>{const tr=document.createElement('tr');
     tr.innerHTML='<td class="num"></td><td></td><td></td><td></td><td></td><td class="num"></td><td class="num"></td><td><button class="small">View</button></td>';
-    const c=tr.children;c[0].textContent=p.r.visitor;c[1].textContent=p.r.name||'–';c[2].textContent=p.r.course||'–';
-    c[3].textContent=NAMES.en[p.r.strong]+' → '+NAMES.en[p.r.weak];c[4].textContent=new Date(p.r.when).toLocaleString([], {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+    const c=tr.children;c[0].textContent=p.r.sid??'…';c[1].textContent=p.r.name||'–';c[2].textContent=p.r.course||'–';
+    c[3].textContent=NAMES.en[p.r.strong]+' → '+NAMES.en[p.r.weak];c[4].textContent=p.r.when?new Date(p.r.when).toLocaleString([], {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'–';
     c[5].textContent=signed(p.s.l2)+' s';c[6].textContent=signed(p.s.sw)+' s';
     c[7].querySelector('button').onclick=()=>renderResults(p.r,true);vb.appendChild(tr)});
   if(!per.length){const tr=document.createElement('tr');tr.innerHTML='<td colspan="8" class="muted">No visitors yet.</td>';vb.appendChild(tr)}
   $('csvOut').hidden=true;$('copyMsg').hidden=true;$('clearConfirm').hidden=true;
-  show('scrBoard','Booth results');
 }
 $('btnBoard').onclick=board;$('btnBack').onclick=()=>show('scrSetup','Setup');
 const q=x=>{x=String(x??'');return /[",\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x};
 function csv(){const rows=[['visitor','name','course','time','strong','weak','list','round','position','picture','target_language','trial_type','rt_ms','error','auto_excluded']];
-  records.forEach(r=>r.trials.forEach(t=>rows.push([r.visitor,r.name,r.course,r.when,r.strong,r.weak,r.list,t.round,t.pos,t.item,t.lang==='S'?r.strong:r.weak,t.type,t.rt,t.error?1:0,t.outlier?1:0])));
+  records.forEach(r=>r.trials.forEach(t=>rows.push([r.sid??'',r.name,r.course,r.when,r.strong,r.weak,r.list,t.round,t.pos,t.item,t.lang==='S'?r.strong:r.weak,t.type,t.rt,t.error?1:0,t.outlier?1:0])));
   return rows.map(x=>x.map(q).join(',')).join('\n')}
 $('btnCopy').onclick=()=>{const text=csv(),m=$('copyMsg'),ta=$('csvOut');
   navigator.clipboard.writeText(text).then(()=>{m.textContent='Copied. Paste it into Excel or Google Sheets.';m.hidden=false})
   .catch(()=>{ta.value=text;ta.hidden=false;ta.focus();ta.select();m.textContent='Copy was blocked here, so the data is shown below and selected. Copy it manually.';m.hidden=false})};
 $('btnClear').onclick=()=>{$('clearConfirm').hidden=false};
 $('btnClearNo').onclick=()=>{$('clearConfirm').hidden=true};
-$('btnClearYes').onclick=()=>{records=[];saveAll(records);board();refreshChip()};
+$('btnClearYes').onclick=async()=>{try{await rpc('speedswitch_clear',{p_pin:pin})}catch(e){$('copyMsg').textContent='Could not clear the online database: '+e.message;$('copyMsg').hidden=false;return}
+  mine=[];remote=[];saveAll(mine);rebuild();board();refreshChip()};
+$('btnPin').onclick=async()=>{const v=$('inPin').value.trim();if(!v)return;pin=v;$('pinMsg').textContent='Checking…';await fetchRemote();
+  if(remoteMode==='full'){try{localStorage.setItem(PINKEY,pin)}catch(e){}$('inPin').value='';$('pinMsg').textContent='';renderBoard()}
+  else $('pinMsg').textContent=online===false?'No internet connection. Try again when online.':'Wrong PIN.'};
+$('btnLock').onclick=async()=>{pin='';try{localStorage.removeItem(PINKEY)}catch(e){}await fetchRemote();renderBoard()};
+window.addEventListener('online',()=>refresh());
+setInterval(()=>{if(!$('scrTrial').hidden)return;refresh()},30000);
 const goSetup=()=>{show('scrSetup','Setup');setTimeout(()=>{try{$('inName').focus()}catch(e){}},50)};
 $('scrWelcome').addEventListener('click',goSetup);
 $('scrWelcome').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();goSetup()}});
 $('btnHome').onclick=()=>show('scrWelcome','Welcome');
-refreshChip();
+rebuild();refreshChip();syncChip();
 show('scrWelcome','Welcome');
+refresh();
 </script>
 
 </body>
