@@ -16,6 +16,7 @@
   --accent:#0d6b66; --accent-ink:#ffffff;
   --cue-s:#1d5bd4; --cue-w:#cf3226; --cue-s-soft:#c9d8f6; --cue-w-soft:#f5cfcb;
   --good:#1f7a3d; --warn:#9a5b00;
+  --banana:#f6d548; --banana-soft:#fbeeb0; --banana-ink:#6b5200; --coconut:#6e4a2e; --coconut-soft:#e9d9c8;
   --f-display:"Bricolage Grotesque","Noto Sans SC",system-ui,sans-serif;
   --f-body:"Atkinson Hyperlegible","Noto Sans SC",system-ui,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
@@ -25,12 +26,12 @@
   --bg:#0d1318; --surface:#151d24; --ink:#e4eaef; --muted:#97a5b0; --line:#28333c;
   --accent:#3db3a9; --accent-ink:#06201e;
   --cue-s:#3a78ee; --cue-w:#e4503f; --cue-s-soft:#1f3355; --cue-w-soft:#4a2421;
-  --good:#5ccf84; --warn:#e2a54a; color-scheme:dark}}
+  --good:#5ccf84; --warn:#e2a54a; --banana:#8a7413; --banana-soft:#3a3214; --banana-ink:#f7dc5c; --coconut:#d6a87c; --coconut-soft:#3b2b1e; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0d1318; --surface:#151d24; --ink:#e4eaef; --muted:#97a5b0; --line:#28333c;
   --accent:#3db3a9; --accent-ink:#06201e;
   --cue-s:#3a78ee; --cue-w:#e4503f; --cue-s-soft:#1f3355; --cue-w-soft:#4a2421;
-  --good:#5ccf84; --warn:#e2a54a; color-scheme:dark}
+  --good:#5ccf84; --warn:#e2a54a; --banana:#8a7413; --banana-soft:#3a3214; --banana-ink:#f7dc5c; --coconut:#d6a87c; --coconut-soft:#3b2b1e; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.5;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 32px}
@@ -137,6 +138,37 @@ tr.out td:last-child{text-decoration:none}
 .chart .dot{fill:var(--muted);opacity:.8}
 .chart .you{stroke:var(--cue-w);stroke-width:3}
 .chart .youlabel{fill:var(--cue-w);font-weight:700}
+
+/* WELCOME / attract screen */
+body.attract .bar{display:none}
+.welcome{position:relative;overflow:hidden;border-radius:26px;min-height:min(88vh,780px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(14px,2.6vh,26px);text-align:center;padding:40px 18px;cursor:pointer;
+  background:radial-gradient(120% 90% at 15% 10%,var(--banana-soft),transparent 55%),radial-gradient(110% 90% at 90% 95%,var(--coconut-soft),transparent 55%),var(--surface);border:1px solid var(--line)}
+.welcome:focus-visible{outline:4px solid var(--accent);outline-offset:4px}
+.w-kicker{font-family:var(--f-mono);font-size:.85rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.w-title{font-family:var(--f-display);font-weight:800;font-size:clamp(2.6rem,9.5vw,6.2rem);line-height:.98;letter-spacing:-.02em;margin:0;text-wrap:balance;max-width:14ch}
+.w-title .ban{color:var(--banana-ink);background:linear-gradient(transparent 62%,var(--banana) 62%);padding:0 .08em}
+.w-title .coc{color:var(--coconut);background:linear-gradient(transparent 62%,var(--coconut-soft) 62%);padding:0 .08em}
+.w-stage{display:flex;align-items:center;justify-content:center;gap:clamp(10px,4vw,40px)}
+.w-stage span{font-family:var(--f-emoji);line-height:1}
+.w-fruit{font-size:clamp(3.6rem,11vw,7rem)}
+.w-globe{font-size:clamp(5rem,16vw,10rem)}
+.w-sub{font-size:clamp(1.1rem,2.4vw,1.45rem);max-width:34ch;color:var(--ink);margin:0}
+.w-flags{font-family:var(--f-emoji);font-size:clamp(1.6rem,4vw,2.3rem);letter-spacing:.18em}
+.w-cta{font-family:var(--f-display);font-size:clamp(1.3rem,3vw,1.7rem);font-weight:800;padding:18px 40px;border-radius:999px;background:var(--accent);color:var(--accent-ink);border:none;box-shadow:0 10px 26px -12px var(--accent)}
+.w-note{font-size:.95rem;color:var(--muted);margin:0}
+.bubble{position:absolute;font-family:var(--f-display);font-weight:600;font-size:clamp(.95rem,2vw,1.2rem);padding:8px 14px;border-radius:16px;background:var(--surface);border:2px solid var(--line);color:var(--ink);white-space:nowrap;pointer-events:none}
+.bubble::after{content:"";position:absolute;bottom:-9px;left:18px;border:8px solid transparent;border-top-color:var(--line);border-bottom:0}
+.b1{top:4%;left:5%}.b2{top:4%;right:5%}.b3{top:40%;left:3%}.b4{top:44%;right:3%}.b5{bottom:9%;left:8%}.b6{bottom:12%;right:9%}
+@media (max-width:640px){.b3,.b4,.b5,.b6{display:none}.b1{top:3%;left:4%}.b2{top:4%;right:4%}}
+@media (prefers-reduced-motion:no-preference){
+  .w-fruit{animation:bob 3.2s ease-in-out infinite}.w-fruit.r{animation-delay:-1.6s}
+  .w-globe{animation:spin 14s linear infinite}
+  .bubble{animation:float 5s ease-in-out infinite}.b2,.b5{animation-delay:-1.7s}.b3,.b6{animation-delay:-3.1s}
+  .w-cta{animation:pulse 2.4s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-12px) rotate(6deg)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}}
 textarea{width:100%;min-height:120px;font-family:var(--f-mono);font-size:.8rem;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:10px}
 @media (max-width:560px){.barrow{grid-template-columns:1fr 64px}.barrow .name{grid-column:1/-1}.controls{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:no-preference){.fill{transition:width .5s ease}}
@@ -156,8 +188,25 @@ textarea{width:100%;min-height:120px;font-family:var(--f-mono);font-size:.8rem;b
     </div>
   </header>
 
+  <!-- WELCOME (attract screen) -->
+  <section id="scrWelcome" class="welcome" tabindex="0" role="button" aria-label="Start the Speed Switch Challenge">
+    <span class="bubble b1">Hello!</span>
+    <span class="bubble b2">你好!</span>
+    <span class="bubble b3">Selamat datang!</span>
+    <span class="bubble b4">Vanakkam!</span>
+    <span class="bubble b5">Konnichiwa!</span>
+    <span class="bubble b6">Annyeong!</span>
+    <span class="w-kicker">PSY 111 · Bilingualism booth</span>
+    <h1 class="w-title">Are you <span class="ban">banana</span> or <span class="coc">coconut</span>?</h1>
+    <div class="w-stage" aria-hidden="true"><span class="w-fruit">🍌</span><span class="w-globe">🌏</span><span class="w-fruit r">🥥</span></div>
+    <p class="w-sub">Your brain keeps every language switched on. How fast can it switch between them?</p>
+    <div class="w-flags" aria-hidden="true">🇲🇾🇨🇳🇬🇧🇮🇳🇯🇵🇰🇷🇮🇩</div>
+    <button class="w-cta" id="btnWelcome" type="button">Tap to play</button>
+    <p class="w-note">3-minute picture-naming game · English, Malay or Chinese</p>
+  </section>
+
   <!-- SETUP (experimenter, English) -->
-  <section id="scrSetup" class="panel">
+  <section id="scrSetup" class="panel" hidden>
     <div><span class="label">Experimenter setup</span><h1>New visitor</h1></div>
     <div class="grid2">
       <div class="field"><label class="label" for="inName">Visitor name</label>
@@ -178,7 +227,7 @@ textarea{width:100%;min-height:120px;font-family:var(--f-mono);font-size:.8rem;b
     <label class="check" for="chkConsent"><input type="checkbox" id="chkConsent"><span>Visitor agreed to be timed and to have their name, course and results kept for our booth records only. They can stop at any time.</span></label>
     <p class="note">After you press Start, the visitor reads a short passage <b>aloud</b> in their <b>weaker</b> language for 60 seconds. All instructions and results are in English.</p>
     <p class="err" id="setupErr" hidden></p>
-    <div class="row"><button class="primary big" id="btnStart">Start warm-up</button></div>
+    <div class="row"><button class="primary big" id="btnStart">Start warm-up</button><button class="ghost" id="btnHome" type="button">Back to welcome screen</button></div>
   </section>
 
   <!-- WARM-UP (visitor, weaker language) -->
@@ -342,8 +391,8 @@ function saveAll(a){try{localStorage.setItem(STORE,JSON.stringify(a));return tru
 let records=loadAll();
 let S={};
 let memOnly=false;
-const SCREENS=['scrSetup','scrWarm','scrOrient','scrIntro','scrTrial','scrReview','scrResults','scrBoard'];
-function show(id,step){SCREENS.forEach(s=>$(s).hidden=s!==id);$('chipStep').textContent=step;
+const SCREENS=['scrWelcome','scrSetup','scrWarm','scrOrient','scrIntro','scrTrial','scrReview','scrResults','scrBoard'];
+function show(id,step){SCREENS.forEach(s=>$(s).hidden=s!==id);document.body.classList.toggle('attract',id==='scrWelcome');$('chipStep').textContent=step;
   $('btnStop').hidden=!['scrWarm','scrOrient','scrIntro','scrTrial','scrReview'].includes(id);$('btnBoard').hidden=id!=='scrSetup';window.scrollTo(0,0)}
 function nextVisitorNo(){return records.reduce((m,r)=>Math.max(m,r.visitor),0)+1}
 function refreshChip(){$('chipVisitor').textContent='Visitor #'+(S.visitor||nextVisitorNo())}
@@ -584,7 +633,7 @@ $('btnViewDel').onclick=()=>{$('delConfirm').hidden=false};
 $('btnDelNo').onclick=()=>{$('delConfirm').hidden=true};
 $('btnDelYes').onclick=()=>{records=records.filter(r=>r.visitor!==S.viewing);saveAll(records);board()};
 $('btnNext').onclick=()=>{S={};$('chkConsent').checked=false;$('inName').value='';$('inCourse').value='';$('selList').value=$('selList').value==='A'?'B':'A';
-  refreshChip();document.documentElement.lang='en';show('scrSetup','Setup')};
+  refreshChip();document.documentElement.lang='en';show('scrWelcome','Welcome')};
 $('btnDiscard').onclick=()=>{records=records.filter(r=>r.visitor!==S.visitor);saveAll(records);$('btnNext').onclick()};
 
 // BOARD
@@ -636,7 +685,12 @@ $('btnCopy').onclick=()=>{const text=csv(),m=$('copyMsg'),ta=$('csvOut');
 $('btnClear').onclick=()=>{$('clearConfirm').hidden=false};
 $('btnClearNo').onclick=()=>{$('clearConfirm').hidden=true};
 $('btnClearYes').onclick=()=>{records=[];saveAll(records);board();refreshChip()};
+const goSetup=()=>{show('scrSetup','Setup');setTimeout(()=>{try{$('inName').focus()}catch(e){}},50)};
+$('scrWelcome').addEventListener('click',goSetup);
+$('scrWelcome').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();goSetup()}});
+$('btnHome').onclick=()=>show('scrWelcome','Welcome');
 refreshChip();
+show('scrWelcome','Welcome');
 </script>
 
 </body>
